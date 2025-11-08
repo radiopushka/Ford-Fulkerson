@@ -29,24 +29,57 @@ A command-line interface implementation of the Ford-Fulkerson algorithm for comp
 
 ```bash
 # Build the project (assuming gcc)
-gcc -o ford_fulkerson_cli main.c ford_fulkerson.c
+make
 
 # Run the program
-./ford_fulkerson_cli
+./flkr
 
 # Interactive session example:
 $ node A
-$ node B  
-$ node C
-$ node D
-$ adde A B 10
-$ adde A C 5
-$ adde B D 8
-$ adde C D 7
+$ node B
+$ node n1
+$ node n2
+$ node n3
+$ adde A n1 50
+added edge A -> n1 | 50
+$ adde A n2 50
+added edge A -> n2 | 50
+$ adde A n3 50
+added edge A -> n3 | 50
+$ node s1
+$ node s2
+$ node s3
+$ adde s1 B 50
+added edge s1 -> B | 50
+$ adde s2 B 50
+added edge s2 -> B | 50
+$ adde s3 B 50
+added edge s3 -> B | 50
+$ adde s1 n1 5
+added edge s1 -> n1 | 5
+$ adde s2 n1 3
+added edge s2 -> n1 | 3
+$ adde n2 s2 16
+added edge n2 -> s2 | 16
+$ adde s2 n3 7
+added edge s2 -> n3 | 7
+$ adde n3 s3 14
+added edge n3 -> s3 | 14
 $ nsrc A
-$ nsnk D
+$ nsnk B
 $ flkr
-# Output shows maximum flow and augmenting paths
+fulkerson run info, max flow: 30
+path:
+node: A to n3 weight 50
+node: n3 to s3 weight 14
+node: s3 to B weight 50
+path:
+node: A to n2 weight 50
+node: n2 to s2 weight 16
+node: s2 to B weight 50
+maxflow: 30
+$ clear
+
 ```
 
 ## Algorithm Details
@@ -58,16 +91,10 @@ This implementation uses the Ford-Fulkerson method with Depth-First Search (DFS)
 3. Updates the residual capacities along the path
 4. Repeats until no more augmenting paths exist
 
-## Dependencies
-
-- C standard library
-- Custom `ford_fulkerson.h` header (implementation of the algorithm)
-- The code expects accompanying `ford_fulkerson.c` file with graph data structures and algorithm implementation
-
 ## Building
 
 ```bash
-gcc -o ford_fulkerson_cli main.c ford_fulkerson.c
+make
 ```
 
 ## Notes
