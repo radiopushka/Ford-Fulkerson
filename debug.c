@@ -133,6 +133,21 @@ void free_system(struct graph* g){
     list = 0;
 }
 
+int rm_edge(struct graph* g, char* src1,char* src2){
+  TO* s1 = find_TO(src1);
+  TO* s2 = find_TO(src2);
+    if(!s1)
+        return 0;
+    if(!s2)
+        return 0;
+    struct  edge* ept = graph_remove_edge(g,s1,s2);
+    if(!ept)
+        return 0;
+    free(ept);
+    return 1;
+
+}
+
 int add_edge(struct graph* g,char* src1,char* src2,int weight){
     TO* s1 = find_TO(src1);
     TO* s2 = find_TO(src2);
@@ -195,7 +210,7 @@ void read_line(){
     line[stp] = 0;
 }
 
-int ncmd = 9;
+int ncmd = 10;
 char* commands[]={
     "node",
     "cler",
@@ -205,7 +220,8 @@ char* commands[]={
     "help",
     "list",
     "nsrc",
-    "nsnk"
+    "nsnk",
+    "rmed"
 };
 char* hint[]={
     "node grnode (expects 1 string)",
@@ -216,7 +232,8 @@ char* hint[]={
     "help -> print this screen",
     "list -> print the nodes",
     "nsrc grnode1 (expects 1 string)",
-    "nsnk grnode1 (expects 1 string)"
+    "nsnk grnode1 (expects 1 string)",
+    "rmed grnode1 grnode2 (expects 2 strings)"
 };
 int get_cmd_id(char* input){
     int len = strlen(input);
@@ -286,6 +303,12 @@ int main() {
             case 8:
                 if(!set_sink(args[1]))
                         printf("failed to set sink node\n");
+                break;
+            case 9:
+                if(!rm_edge(g,args[1],args[2]))
+                        printf("failed to remove edge\n");
+                else
+                    printf("removed edge %s -> %s\n",(char*)args[1],(char*)args[2]);
                 break;
         }
         for(int i = 0;i<argc;i++){
