@@ -264,6 +264,10 @@ int main() {
         int ec;
         switch(cmd){
             case 0:
+                if(argc !=2){
+                    printf("bad args\n");
+                    break;
+                }
                 if(!add_TO(args[1],g))
                     printf("failed to add node\n");
                 break;
@@ -274,6 +278,11 @@ int main() {
 
                 break;
             case 2:
+                if(argc !=4){
+                    printf("bad args\n");
+                    break;
+                }
+
                 ec = atoi(args[3]);
                 if(!add_edge(g,args[1],args[2],ec))
                         printf("failed to add edge\n");
@@ -281,6 +290,11 @@ int main() {
                     printf("added edge %s -> %s | %d\n",(char*)args[1],(char*)args[2],ec);
                 break;
             case 3:
+                if(argc !=2){
+                    printf("bad args\n");
+                    break;
+                }
+
                 if(! remove_TO(args[1],g))
                         printf("node removal failed\n");
                 break;
@@ -297,14 +311,29 @@ int main() {
                 list_TO();
                 break;
             case 7:
+                if(argc !=2){
+                    printf("bad args\n");
+                    break;
+                }
+
                 if(!set_src(args[1]))
                     printf("failed to set source node\n");
                 break;
             case 8:
+                if(argc !=2){
+                    printf("bad args\n");
+                    break;
+                }
+
                 if(!set_sink(args[1]))
                         printf("failed to set sink node\n");
                 break;
             case 9:
+                if(argc !=3){
+                    printf("bad args\n");
+                    break;
+                }
+
                 if(!rm_edge(g,args[1],args[2]))
                         printf("failed to remove edge\n");
                 else
