@@ -28,7 +28,7 @@ A command-line interface implementation of the Ford-Fulkerson algorithm for comp
 ## Usage Example
 
 ```bash
-# Build the project (assuming gcc)
+# Build the project 
 make
 
 # Run the program
