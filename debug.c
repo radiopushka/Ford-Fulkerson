@@ -1,10 +1,56 @@
 #include "ford_fulkerson.h"
 #include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+
+void* args[4];
+
+int get_args(char* input) {
+    int len = strlen(input);
+    int arg_count = 0;
+    int start = -1;
+
+    // Initialize args to NULL
+    for (int i = 0; i < 4; i++) {
+        args[i] = NULL;
+    }
+
+    for (int i = 0; i <= len; i++) {
+        if (input[i] != ' ' && input[i] != '\0') {
+            if (start == -1) {
+                start = i;
+            }
+        } else {
+            if (start != -1) {
+                int arg_len = i - start;
+                args[arg_count] = malloc(arg_len + 1);
+                strncpy((char*)args[arg_count], input + start, arg_len);
+                ((char*)args[arg_count])[arg_len] = '\0';
+                arg_count++;
+                start = -1;
+                if (arg_count >= 4) {
+                    break;
+                }
+            }
+        }
+    }
+    return arg_count;
+}
+
+struct trackable_object{
+    char* name;
+    int max;
+    int cur;
+    struct trackable_object* next;
+};
 
 void print_DFS_path(struct DFS_path* path){
     while(path){
-        if(path->conn)
-            printf("node: %s to %s weight %d\n",(char*)path->from->descriptor,(char*)((struct node*)path->conn->pointer)->descriptor,path->conn->weight);
+        if(path->conn){
+            struct trackable_object* fr = path->from->descriptor;
+            struct trackable_object* to = ((struct node*)(path->conn->pointer))->descriptor;
+            printf("node: %s to %s weight %d\n",fr->name,to->name,path->conn->weight);
+        }
         path = path->next;
 
     }
@@ -20,119 +66,238 @@ void print_fulkerson(struct fulkerson_info f_info){
     }
 
 }
-struct trackable_object{
-    char* name;
-    int max;
-    int cur;
-};
+
 typedef struct trackable_object TO;
 
+TO* nsrc = NULL;
+TO* nsink = NULL;
+
+TO* list = NULL;
+TO* find_TO(char* name){
+    TO* lcp = list;
+    while(lcp){
+        if(strcmp(lcp->name,name) == 0)
+            return lcp;
+        lcp = lcp->next;
+    }
+
+    return 0;
+}
+int add_TO(char* name,struct graph* g){
+    if(find_TO(name))
+        return 0;
+    TO* entry = malloc(sizeof(TO));
+    entry->name = malloc(sizeof(char)*(strlen(name)+1));
+    memmove(entry->name,name,strlen(name)+1);
+    entry->next = list;
+    list = entry;
+    graph_add(g,entry);
+    return 1;
+}
+
+int remove_TO(char* name,struct graph* g){
+    TO* lcp = list;
+    TO* prev = 0;
+    while(lcp){
+        if(strcmp(lcp->name,name) == 0){
+            graph_dump_node(g,lcp);
+            if(!prev)
+                list = lcp->next;
+            else
+                prev->next = lcp->next;
+            if(nsink == lcp)
+                nsink = 0;
+            if(nsrc == lcp)
+                nsrc = 0;
+            free(lcp->name);
+            free(lcp);
+            return 1;
+        }
+        prev = lcp;
+        lcp = lcp->next;
+    }
+    return 0;
+}
+void free_system(struct graph* g){
+    free_graph(g);
+    TO* lcp = list;
+    TO* tmp;
+    while(lcp){
+        tmp = lcp->next;
+        free(lcp->name);
+        free(lcp);
+        lcp = tmp;
+    }
+    nsink = 0;
+    nsrc = 0;
+    list = 0;
+}
+
+int add_edge(struct graph* g,char* src1,char* src2,int weight){
+    TO* s1 = find_TO(src1);
+    TO* s2 = find_TO(src2);
+    if(!s1)
+        return 0;
+    if(!s2)
+        return 0;
+    return graph_add_edge(g,s1,s2,weight);
+}
+
+int set_src(char* src){
+    TO* s =find_TO(src);
+    if(!s)
+        return 0;
+    nsrc = s;
+    return 1;
+
+}
+int set_sink(char* snk){
+    TO* s =find_TO(snk);
+    if(!s)
+        return 0;
+    nsink = s;
+    return 1;
+
+}
+
+void run_fulkerson(struct graph* g){
+    if(!nsrc){
+        printf("source node not set\n");
+        return;
+    }
+    if(!nsink){
+        printf("sink node not set\n");
+        return;
+    }
+    struct fulkerson_info f_info = ford_fulkerson(g,nsrc,nsink);
+    print_fulkerson(f_info);
+    printf("maxflow: %d\n", f_info.max_flow);
+    free_fulkerson(f_info);
+}
+void list_TO(){
+    TO* lcp = list;
+    while(lcp){
+        printf("%s\n",lcp->name);
+        lcp = lcp->next;
+    }
+
+
+}
+
+char line[4096];
+void read_line(){
+    char c;
+    int stp =0;
+    while((c = getchar())!='\n'){
+        line[stp] = c;
+        stp++;
+    }
+    line[stp] = 0;
+}
+
+int ncmd = 9;
+char* commands[]={
+    "node",
+    "cler",
+    "adde",
+    "rmnd",
+    "flkr",
+    "help",
+    "list",
+    "nsrc",
+    "nsnk"
+};
+char* hint[]={
+    "node grnode (expects 1 string)",
+    "cler -> clears everything",
+    "adde grnode1 grnode2 weight (expects 2 string and 1 int)",
+    "rmnd grnode1 (expects 1 string)",
+    "flkr -> run fulkerson",
+    "help -> print this screen",
+    "list -> print the nodes",
+    "nsrc grnode1 (expects 1 string)",
+    "nsnk grnode1 (expects 1 string)"
+};
+int get_cmd_id(char* input){
+    int len = strlen(input);
+    for(int i = 0;i<ncmd;i++){
+        if(strcmp(input,commands[i]) == 0)
+            return i;
+    }
+    return -1;
+}
+void help(){
+    printf("commands: \n");
+    for(int i = 0;i<ncmd;i++){
+        printf("%s | %s\n",commands[i],hint[i]);
+    }
+    printf("exit | exit\n");
+}
+
 int main() {
-    // Create source and sink
-    TO source = {"SOURCE", 0, 0};
-    TO sink = {"SINK", 0, 0};
-
-    // Engineers
-    TO s1 = {"s1",1,0};
-    TO s2 = {"s2",1,0};
-    TO s3 = {"s3",2,0};
-    TO s4 = {"s4",1,0};
-    TO s5 = {"s5",1,0};
-
-    // Projects
-    TO p1 = {"p1",1,0};
-    TO p2 = {"p2",2,0};
-    TO p3 = {"p3",1,0};
-    TO p4 = {"p4",1,0};
-    TO p5 = {"p5",1,0};
 
 
     struct graph* g = new_graph();
 
-    // Add all nodes to graph
-    graph_add(g, &source);
-    graph_add(g, &sink);
-    graph_add(g, &s1);
-    graph_add(g, &s2);
-    graph_add(g, &s3);
-    graph_add(g, &s4);
-    graph_add(g, &s5);
-    graph_add(g, &p1);
-    graph_add(g, &p2);
-    graph_add(g, &p3);
-    graph_add(g, &p4);
-    graph_add(g, &p5);
+    while(strcmp(line,"exit")!=0){
+        printf("$ ");
+        read_line();
+        int argc = get_args(line);
+        int cmd = get_cmd_id(args[0]);
+        int ec;
+        switch(cmd){
+            case 0:
+                if(!add_TO(args[1],g))
+                    printf("failed to add node\n");
+                break;
+            case 1:
+                free_system(g);
+                printf("graphs cleared\n");
+                g = new_graph();
 
-    // Connect SOURCE to engineers with capacity based on assignment limits
-    graph_add_edge(g, &source, &s1, s1.max);  // s1 can work on 1 project
-    graph_add_edge(g, &source, &s2, s2.max);  // s2 can work on 1 project
-    graph_add_edge(g, &source, &s3, s3.max);  // s3 can work on 2 projects
-    graph_add_edge(g, &source, &s4, s4.max);  // s4 can work on 1 project
-    graph_add_edge(g, &source, &s5, s5.max);  // s5 can work on 1 project
+                break;
+            case 2:
+                ec = atoi(args[3]);
+                if(!add_edge(g,args[1],args[2],ec))
+                        printf("failed to add edge\n");
+                else
+                    printf("added edge %s -> %s | %d\n",(char*)args[1],(char*)args[2],ec);
+                break;
+            case 3:
+                if(! remove_TO(args[1],g))
+                        printf("node removal failed\n");
+                break;
+            case 4:
+                run_fulkerson(g);
+                break;
 
-    // Connect engineers to projects based on skill compatibility
-    // s1 can work on p1, p2
-    graph_add_edge(g, &s1, &p1, 1);
-    graph_add_edge(g, &s1, &p2, 1);
 
-    // s2 can work on p2
-    graph_add_edge(g, &s2, &p2, 1);
+            case 5:
+                help();
+                break;
 
-    // s3 can work on p1, p3, p4
-    graph_add_edge(g, &s3, &p1, 1);
-    graph_add_edge(g, &s3, &p3, 1);
-    graph_add_edge(g, &s3, &p4, 1);
-
-    // s4 can work on p2, p4
-    graph_add_edge(g, &s4, &p2, 1);
-    graph_add_edge(g, &s4, &p4, 1);
-
-    // s5 can work on p2, p5
-    graph_add_edge(g, &s5, &p2, 1);
-    graph_add_edge(g, &s5, &p5, 1);
-
-    // Connect projects to SINK with capacity based on project needs
-    graph_add_edge(g, &p1, &sink, p1.max);  // p1 needs 1 engineer
-    graph_add_edge(g, &p2, &sink, p2.max);  // p2 needs 2 engineers
-    graph_add_edge(g, &p3, &sink, p3.max);  // p3 needs 1 engineer
-    graph_add_edge(g, &p4, &sink, p4.max);  // p4 needs 1 engineer
-    graph_add_edge(g, &p5, &sink, p5.max);  // p5 needs 1 engineer
-
-    // Run Ford-Fulkerson to find maximum assignments
-    struct fulkerson_info f_info = ford_fulkerson(g, &source, &sink);
-
-    printf("Maximum number of assignments: %d\n", f_info.max_flow);
-
-    // Print the actual assignments by examining the flow
-    printf("Assignments:\n");
-    //print_fulkerson(f_info);
-
-    struct fulkerson_paths* path = f_info.paths;
-    while(path){
-        struct DFS_path* path2 = path->path;
-        while(path2){
-            if(path2->conn && path2->from ){
-                TO* pobj1 = path2->from->descriptor;
-                if(pobj1->name[0] == 's'){
-
-                    TO* pobj2 = ((struct node*)path2->conn->pointer)->descriptor;
-                    if(pobj1->cur < pobj1->max && pobj2->cur < pobj2->max){
-                        printf("%s -> %s\n",pobj1->name,pobj2->name);
-                        pobj1->cur++;
-                        pobj2->cur++;
-                    }
-                }
-            }
-            path2 = path2->next;
-
+            case 6:
+                list_TO();
+                break;
+            case 7:
+                if(!set_src(args[1]))
+                    printf("failed to set source node\n");
+                break;
+            case 8:
+                if(!set_sink(args[1]))
+                        printf("failed to set sink node\n");
+                break;
+        }
+        for(int i = 0;i<argc;i++){
+            free(args[i]);
         }
 
-        path = path->next;
+        if(cmd ==  -1 && strcmp(line,"exit")!=0)
+            printf("unknown command\n");
+
     }
 
-
-    free_fulkerson(f_info);
-    free_graph(g);
+    free_system(g);
     return 0;
 }
 
